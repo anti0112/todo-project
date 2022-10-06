@@ -1,9 +1,9 @@
-name: Build and deploy actions
+name: Build and deploy action
 on:
   push:
     branches:
       - main
-    # - deploy
+#      - deploy
 jobs:
   build_and_push:
     runs-on: ubuntu-latest
@@ -12,9 +12,9 @@ jobs:
         uses: actions/checkout@v2
       - name: docker build
         run: |
-          docker build . -t docker build -t ${{secrets.DOCKER_NAME}}/todo-list:$GITHUB_REF_NAME-$GITHUB_RUN_ID .
+          docker build . -t ${{ secrets.DOCKER_NAME }}/todo-list:$GITHUB_REF_NAME-$GITHUB_RUN_ID -f Dockerfile
       - name: docker login
-        run: docker login -u ${{ secrets.DOCKER_NAME }} -p ${{ secrets.DOCKER_TOKEN }} 
+        run: echo ${{ secrets.DOCKER_TOKEN }} | docker login -u ${{ secrets.DOCKER_NAME }} --password-stdin
       - name: docker push
         run: docker push ${{ secrets.DOCKER_NAME }}/todo-list:$GITHUB_REF_NAME-$GITHUB_RUN_ID
   deploy:
@@ -29,30 +29,30 @@ jobs:
       DB_PORT: ${{ secrets.DB_PORT }}
       DB_NAME: ${{ secrets.DB_NAME }}
       DB_USER: ${{ secrets.DB_USER }}
-      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}   
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
     steps:
       - name: clone code
         uses: actions/checkout@v2
-        - name: render docker-compose and .env
-        run: |
+      - name: render docker-compose and .env
+        run: | 
           mkdir deploy
           cat deploy/docker-compose.ci.yml | envsubst > deploy/docker-compose.yml
           cat deploy/.ci-env | envsubst > deploy/.env
-        - name: copy files to server
-          uses: appleboy.scp-action@main
-          with:
-            host: ${{secrets.SERVER_HOST}
-            username: ${{ secrets.SERVER_USERNAME }}
-            password: ${{ secrets.SERVER_PASSWORD }}
-            source: "deploy/docker-compose.yml,deploy/.env"
-            target: 'todolist'
-            strip_components: 1
-          - name: deploy app
-            uses: appleboy/ssh-action@main
-            with:
-              host: ${{secrets.SERVER_HOST}
-              username: ${{ secrets.SERVER_USERNAME }}
-              password: ${{ secrets.SERVER_PASSWORD }}
-            script: | 
-              cd todolist
-              echo ${{ secrets.SERVER_PASSWORD}} | sudo -S docker-compose up -d 
+      - name: copy files to server
+        uses: appleboy/scp-action@main
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          source: "deploy/docker-compose.yml,deploy/.env"
+          target: "todolist"
+          strip_components: 1
+      - name: deploy app
+        uses: appleboy/ssh-action@main
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USERNAME }}
+          password: ${{ secrets.SERVER_PASSWORD }}
+          script: |
+            cd todolist
+            echo ${{ secrets.SERVER_PASSWORD }} | sudo -S docker-compose up -d
