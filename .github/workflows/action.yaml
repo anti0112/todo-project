@@ -44,8 +44,8 @@ jobs:
             host: ${{secrets.SERVER_HOST}
             username: ${{ secrets.SERVER_USERNAME }}
             password: ${{ secrets.SERVER_PASSWORD }}
-            source: "deploy/docker-compose.yml, deploy/.env"
-            target: "todolist"
+            source: "deploy/docker-compose.yml,deploy/.env"
+            target: 'todolist'
             strip_components: 1
           - name: deploy app
             uses: appleboy/ssh-action@main
