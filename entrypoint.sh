@@ -1,0 +1,1 @@
+python3 ./todolist/manage.py runserver
