@@ -16,16 +16,15 @@ services:
     depends_on:
       - migrations
       - pg
-    env_file:
-      - ./.env
     ports:
       - "8000:8000"
     volumes:
-    - ./todolist/:/app/todolist
-
+    - ./.env:/app/.env
 
   migrations:
     build: .
+    environment:
+      DB_HOST: pg
     depends_on:
       - pg
     volumes:
@@ -42,7 +41,7 @@ services:
       POSTGRES_DB: ${DB_NAME}
     restart: always
     ports:
-      - '5433:5432'
+      - '5432:5432'
     volumes:
       - ./pg_data:/var/lib/postgresql/data
     healthcheck:
