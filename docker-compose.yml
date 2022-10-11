@@ -19,7 +19,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-    - ./.env:/app/.env
+    - ./todolist:/app/todolist
 
 
   migrations:
