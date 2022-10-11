@@ -1,6 +1,6 @@
 FROM python:3.9-slim
 
-
+ENV HOME /app
 WORKDIR /app
 
 COPY requirements.txt .

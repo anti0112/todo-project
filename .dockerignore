@@ -1,4 +1,4 @@
-.git
+git
 .gitignore
 .gitattributes
 
@@ -65,7 +65,7 @@ docs/_build/
 target/
 
 # Virtual environment
-
+.env
 .venv/
 venv/
 

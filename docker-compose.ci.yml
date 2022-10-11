@@ -4,14 +4,12 @@ services:
   front:
     image: sermalenk/skypro-front:lesson-35
     ports:
-      - "80:80"
+      - "3000:3000"
     depends_on:
       - api
 
   api:
     image: anti11/todo-list:${GITHUB_REF_NAME}-${GITHUB_RUN_ID}
-    environment:
-      DB_HOST: pg
     depends_on:
       - migrations
       - pg
@@ -36,6 +34,8 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     restart: always
+    ports:
+      - '5433:5432'
     volumes:
       - ./pg_data:/var/lib/postgresql/data
     healthcheck:
