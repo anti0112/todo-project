@@ -19,14 +19,16 @@ services:
     ports:
       - "8000:8000"
     volumes:
-    - ./todolist/:/app/
+    - ./todolist/:/app/todolist
 
   migrations:
     build: .
+    environment:
+      DB_HOST: pg
     depends_on:
       - pg
-    volumes:
-    - ./.env:/app/.env
+    env_file:
+      ./.env
     command: >
       sh -c "python3 ./todolist/manage.py migrate"
 

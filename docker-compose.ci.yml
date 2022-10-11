@@ -18,12 +18,15 @@ services:
     ports:
       - "8000:8000"
     volumes:
-    - ./todolist/:/app/
+    - ./todolist/:/app/todolist
 
   migrations:
     image: anti11/todo-list:${GITHUB_REF_NAME}-${GITHUB_RUN_ID}
-    depends_on:
+    environment:
+      DB_HOST: pg
+      depends_on:
       - pg
+    
     volumes:
     - ./.env:/app/.env
     command: >
