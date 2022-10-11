@@ -18,15 +18,12 @@ services:
     ports:
       - "8000:8000"
     volumes:
-    - ./todolist/:/app/todolist
+    - ./.env:/app/.env
 
   migrations:
     image: anti11/todo-list:${GITHUB_REF_NAME}-${GITHUB_RUN_ID}
-    environment:
-      DB_HOST: pg
-      depends_on:
+    depends_on:
       - pg
-    
     volumes:
     - ./.env:/app/.env
     command: >
@@ -39,8 +36,6 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     restart: always
-    ports:
-      - '5432:5432'
     volumes:
       - ./pg_data:/var/lib/postgresql/data
     healthcheck:
