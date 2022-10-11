@@ -4,12 +4,15 @@ services:
   front:
     image: sermalenk/skypro-front:lesson-35
     ports:
-      - "3000:3000"
+      - "80:80"
     depends_on:
       - api
 
+
   api:
     build: .
+    environment:
+      DB_HOST: pg
     depends_on:
       - migrations
       - pg
@@ -17,6 +20,7 @@ services:
       - "8000:8000"
     volumes:
     - ./.env:/app/.env
+
 
   migrations:
     build: .
@@ -26,6 +30,7 @@ services:
     - ./.env:/app/.env
     command: >
       sh -c "python3 ./todolist/manage.py migrate"
+
 
   pg:
     image: postgres:14.3-alpine
