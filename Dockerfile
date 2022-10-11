@@ -7,4 +7,4 @@ COPY requirements.txt .
 RUN python3 -m pip install -r requirements.txt
 
 COPY . .
-CMD [ "sh", "entrypoint.sh" ]
+CMD python3 -m ./todolist/manage.py runserver

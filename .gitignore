@@ -3,4 +3,3 @@ venv/
 .idea/
 ./django_static
 .env
-pg_data
