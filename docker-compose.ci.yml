@@ -15,7 +15,6 @@ services:
       - pg
     volumes:
     - "./.env:/app/.env"
-    - "./todolist:./app/todolist"
 
   migrations:
     image: anti11/todo-list:${GITHUB_REF_NAME}-${GITHUB_RUN_ID}
