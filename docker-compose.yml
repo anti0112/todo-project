@@ -4,7 +4,7 @@ services:
   front:
     image: sermalenk/skypro-front:lesson-35
     ports:
-      - "3000:3000"
+      - 8080:80
     depends_on:
       - api
 
@@ -13,8 +13,6 @@ services:
     depends_on:
       - migrations
       - pg
-    ports:
-      - "8000:8000"
     volumes:
     - ./.env:/app/.env
 
@@ -35,7 +33,7 @@ services:
       POSTGRES_DB: ${DB_NAME}
     restart: always
     ports:
-      - '5433:5432'
+      - 5433:5432
     volumes:
       - ./pg_data:/var/lib/postgresql/data
     healthcheck:
