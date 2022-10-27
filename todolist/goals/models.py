@@ -32,7 +32,7 @@ class GoalCategory(DatesModelMixin):
     )
     is_deleted = models.BooleanField(
         verbose_name = 'Удалена',
-        default = False,
+        default = False, 
     )
     
 class Goal(DatesModelMixin):
