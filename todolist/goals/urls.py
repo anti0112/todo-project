@@ -1,9 +1,9 @@
 from django.urls import path
 
-from goals import views
+from goals.views import category
 
 urlpatterns = [
-    path('goal_category/create', views.GoalCategoryCreateView.as_view()),
-    path("goal_category/list", views.GoalCategoryListView.as_view()),
-    path("goal_category/<pk>", views.GoalCategoryView.as_view()),
+    path('goal_category/create', category.CategoryCreateView.as_view()),
+    path("goal_category/list", category.CategoryListView.as_view()),
+    path("goal_category/<pk>", category.CategoryView.as_view()),
 ]
