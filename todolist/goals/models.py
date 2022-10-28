@@ -77,7 +77,10 @@ class Goal(DatesModelMixin):
     priority = models.PositiveSmallIntegerField(
         verbose_name='Приоритет', choices=Priority.choices, default=Priority.medium,    
     )
-
+    is_deleted = models.BooleanField(
+        verbose_name="Удалена",
+        default=False
+    )
 class Board(DatesModelMixin):
     class Meta:
         verbose_name = 'Доска'
