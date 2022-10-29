@@ -81,6 +81,8 @@ class Goal(DatesModelMixin):
         verbose_name="Удалена",
         default=False
     )
+    
+    
 class Board(DatesModelMixin):
     class Meta:
         verbose_name = 'Доска'
@@ -91,5 +93,21 @@ class Board(DatesModelMixin):
     
     def __str__(self):
         return self.title
+
+class Comment(DatesModelMixin):
+    class Meta:
+        verbose_name = 'Комментарий'
+        verbose_name_plural = 'Комментарии'
+        
+    user = models.ForeignKey(
+        User, verbose_name='Автор', on_delete=models.PROTECT
+    )
+    goal = models.ForeignKey(
+        Goal, verbose_name='Цель', on_delete=models.CASCADE
+    )
+    text = models.CharField(
+        verbose_name='Текст', max_length=500
+    )
+    
     
     
