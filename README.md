@@ -8,12 +8,11 @@ source venv/Scripts/activate
 ```shell
 pip install -r requirements.txt
 ```
-### 2. Создаем контейнер с базой данных Postgresql с помощью команды:
+### 2. Заполнить файл .env.example нужными данными
+### 3. Создаем контейнеры требующиеся для работы программы
 ```shell
 docker-compose up -d
 ```
 ### В проекте уже настроенно подлючение к базе данных созданной через docker-compose,
-### 3. Выполнить миграции
-```shell
-./manage.py migrate
-```
+
+
