@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from goals.models import Board, BoardParticipant
 from core.models import User
+from django.db import transaction
+
 
 class BoardCreateSerializer(serializers.ModelSerializer):
     user = serializers.HiddenField(default=serializers.CurrentUserDefault())
@@ -46,5 +48,26 @@ class BoardSerializer(serializers.ModelSerializer):
         fields = "__all__"
         
     def update(self, instance, validated_data):
-        # ваш код для работы с участниками
+        owner = validated_data.pop('user')
+        new_participant = validated_data.pop('participants')
+        new_id = {part['user'].id: part for part in new_participant.participants}
+        old_participants = instance.participants.exlude(user=owner)
+        
+        with transaction.atomic():
+            for old_participant in old_participants:
+                if old_participant.user_id not in new_id:
+                    old_participant.delete()
+                else:
+                    if old_participant.role != new_id[old_participant.user_id['role']]:
+                        old_participant.role = new_id[old_participant.user_id['role']]
+                        old_participant.save()
+                    new_id.pop(old_participants.user_id)
+            for new_part in new_id.values():
+                BoardParticipant.objects.create(
+                    board=instance, user=new_part['user'], role=new_part['role']
+                )
+            instance.title = validated_data['title']
+            instance.save()
         return instance
+
+                        
