@@ -172,3 +172,5 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'Awesome hunting API',
     'VERSION': '1.0.0',
 }
+
+TG_TOKEN = os.getenv('TG_TOKEN')

@@ -8,6 +8,16 @@ services:
     depends_on:
       - api
 
+  bot:
+    build: .
+    depends_on:
+      - pg
+      - migrations
+    volumes:
+      - ./.env:/app/.env
+    command: >
+      sh -c "python3 ./todolist/manage.py runbot"
+
   api:
     build: .
     depends_on:
