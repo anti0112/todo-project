@@ -23,4 +23,4 @@ class VerificationView(GenericAPIView):
         tg_client = TgClient(settings.TG_TOKEN)
         tg_client.send_message(tg_user.tg_chat_id, '[verification complete]')
         
-        return Response(instance_s.data)
+        return Response(instance_s.data) 
