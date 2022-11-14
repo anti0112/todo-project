@@ -1,26 +1,26 @@
-from django.conf import settings
+import json
+
+from django.core.exceptions import ObjectDoesNotExist
+from django.http import JsonResponse, HttpResponse
 from rest_framework import permissions
-from rest_framework.generics import GenericAPIView
-from rest_framework.response import Response
+from rest_framework.generics import UpdateAPIView
 
 from bot.models import TgUser
-from bot.serializers import TgUserSerializer
 from bot.tg.client import TgClient
+from todolist.settings import TG_TOKEN
 
-class VerificationView(GenericAPIView):
-    model = TgUser
-    permission_classes = [permissions.IsAuthenticated]
-    serializer_class = TgUserSerializer
-    
-    def patch(self, request, *args, **kwargs):
-        s: TgUserSerializer = self.get_serializer(data=request.data)
-        s.is_valid(raise_exception=True)
 
-        tg_user: TgUser = s.validated_data['tg_user']
-        tg_user.user = self.requests.user
-        tg_user.save(update_fields=['user'])
-        instance_s: TgUserSerializer = self.get_serializer(tg_user)
-        tg_client = TgClient(settings.TG_TOKEN)
-        tg_client.send_message(tg_user.tg_chat_id, '[verification complete]')
-        
-        return Response(instance_s.data) 
+class BotVerifyView(UpdateAPIView):
+	model = TgUser
+	permission_classes = [permissions.IsAuthenticated]
+
+	def patch(self, request, *args, **kwargs):
+		code = request.data.get('verification_code')
+		try:
+			tg_user = TgUser.objects.get(verification_code=code)
+			tg_user.user = request.user
+			tg_user.save()
+			TgClient(TG_TOKEN).send_message(chat_id=tg_user.tg_id, text='Верификация прошла успешно!')
+			return HttpResponse(status=200)
+		except ObjectDoesNotExist:
+			return JsonResponse({'detail': 'Verification code is invalid'}, status=400)

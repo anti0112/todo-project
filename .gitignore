@@ -4,3 +4,4 @@ venv/
 ./django_static
 .env
 pg_data/
+__pycache__/
