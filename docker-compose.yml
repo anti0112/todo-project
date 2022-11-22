@@ -10,28 +10,37 @@ services:
 
   bot:
     build: .
+    env_file:
+      - ./.env
+    environment:
+      DB_HOST: pg
     depends_on:
       - pg
       - migrations
-    volumes:
-      - ./.env:/app/.env
+    
     command: >
       sh -c "python3 ./todolist/manage.py runbot"
 
   api:
     build: .
+    env_file:
+      - ./.env
+    environment:
+      DB_HOST: pg
     depends_on:
       - migrations
       - pg
-    volumes:
-    - ./.env:/app/.env
+    
 
   migrations:
     build: .
+    env_file:
+      - ./.env
+    environment:
+      DB_HOST: pg
     depends_on:
       - pg
-    volumes:
-    - ./.env:/app/.env
+    
     command: >
       sh -c "python3 ./todolist/manage.py migrate"
 

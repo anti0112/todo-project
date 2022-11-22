@@ -13,25 +13,32 @@ services:
     depends_on:
       - migrations
       - pg
-    volumes:
-    - "./.env:/app/.env"
+    env_file:
+      - ./.env
+    environment:
+      DB_HOST: pg
+
   
   bot:
     image: anti11/todo-list:${GITHUB_REF_NAME}-${GITHUB_RUN_ID}
+    env_file:
+      - ./.env
+    environment:
+      DB_HOST: pg
     depends_on: 
       - pg
       - migrations
-    volumes:
-      - ./.env:/app/.env
     command: >
       sh -c "python3 ./todolist/manage.py runbot"
 
   migrations:
     image: anti11/todo-list:${GITHUB_REF_NAME}-${GITHUB_RUN_ID}
+    env_file:
+      - ./.env
+    environment:
+      DB_HOST: pg
     depends_on:
       - pg
-    volumes:
-    - ./.env:/app/.env
     command: >
       sh -c "python3 ./todolist/manage.py migrate"
 
