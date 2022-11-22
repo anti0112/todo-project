@@ -57,7 +57,7 @@ class BoardSerializer(serializers.ModelSerializer):
         read_only_fields = ("id", "created", "updated")
 
     def update(self, instance, validated_data):
-        owner = validated_data.pop("user")
+        owner = self.context['request'].user
         
         with transaction.atomic():
             if validated_data.get("participants"):

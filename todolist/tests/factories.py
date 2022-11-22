@@ -1,19 +1,18 @@
 import factory
 
 from core.models import User
-from goals.models import Goal, GoalCategory, Board, BoardParticipant, GoalComment
+from goals.models import Goal, GoalCategory, Board, BoardParticipant, Comment
 
 
 class UserFactory(factory.django.DjangoModelFactory):
-	class Meta:
-		model = User
-
-	username = factory.Faker('name')
-	first_name = 'First name'
-	last_name = 'Last name'
-	email = 'email@mail.ru'
-	password = 'Password8956'
-
+    class Meta:
+        model = User
+    id = 1
+    username = factory.Faker('name')
+    first_name = 'First name'
+    last_name = 'Last name'
+    email = 'email@mail.ru'
+    password = 'Password8956'
 
 class BoardFactory(factory.django.DjangoModelFactory):
 	class Meta:
@@ -57,9 +56,10 @@ class GoalFactory(factory.django.DjangoModelFactory):
 
 
 class GoalCommentFactory(factory.django.DjangoModelFactory):
-	class Meta:
-		model = GoalComment
-
-	text = 'Test text'
-	goal = factory.SubFactory(GoalFactory)
-	user = factory.SubFactory(UserFactory)
+    class Meta:
+        model = Comment
+    
+    text = 'Test comment'
+    goal = factory.SubFactory(GoalFactory)
+    user = factory.SubFactory(UserFactory)
+    
