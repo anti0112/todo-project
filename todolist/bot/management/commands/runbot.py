@@ -1,138 +1,170 @@
-import enum
-import random
-import string
-import datetime
+from random import randint
 
-from django.core.management.base import BaseCommand
+from django.core.management import BaseCommand
 
-from bot.models import TgUser
-from bot.tg.client import TgClient
-from core.models import User
-from goals.models import Goal, GoalCategory
 from todolist.settings import TG_TOKEN
-
-
-class BotCommands:
-	goals = '/goals'
-	create = '/create'
-	cancel = '/cancel'
-
-
-class State(enum.Enum):
-	not_in_db = enum.auto()
-	no_verify = enum.auto()
-	wait_command = enum.auto()
-	choice_category = enum.auto()
-	create_goal = enum.auto()
+from goals.models import Goal, Category, BoardParticipant
+from bot.models import TgUser
+from bot.tg import TgClient
+from bot.tg.dc import GetUpdatesResponse
 
 
 class Command(BaseCommand):
+    help = 'Start telegram bot'
 
-	def handle(self, *args, **options) -> None:
-		offset = 0
-		tg_client = TgClient(TG_TOKEN)
-		state = None
-		while True:
-			try:
-				res = tg_client.get_updates(offset=offset)
-			except Exception as error:
-				print(f'\n{error}', end='\n\n')
-				continue
-			for item in res.result:
-				offset = item.update_id + 1
-				chat_id = item.message.chat.id
+    def __init__(self):
+        self.offset = 0
+        self.tg_client = TgClient(TG_TOKEN)
+        self.response: GetUpdatesResponse
+        self.chat_id: int
+        self.tg_user_id: int
+        self.message: str
+        self.message_id: int = 0
 
-				# Описываем состояния
-				if not state and not TgUser.objects.filter(tg_id=chat_id):
-					state = State.not_in_db
-				elif not TgUser.objects.get(tg_id=chat_id).user:
-					state = State.no_verify
-				elif state not in (State.choice_category, State.create_goal):
-					state = State.wait_command
+        self.user: TgUser = None
+        self.tg_user: TgUser
+        self.category: Category
+        self.goal: Goal
 
-				# Действия в зависимости от состояний
+        self.reply_required: bool = False
+        self.category_mode: bool = False
+        self.goal_mode: bool = False
+        super().__init__()
 
-				# Если пользователя еще нет в базе
-				if state == State.not_in_db:
-					TgUser.objects.create(
-						tg_id=chat_id,
-						username=item.message.chat.username if item.message.chat.username else None,
-					)
-					state = State.no_verify
+    def handle(self, *args, **options):
+        while True:
+            self._get_response()
 
-				tg_user = TgUser.objects.get(tg_id=chat_id)
+            if self.reply_required:
+                if self.user:
+                    reply = self._main_logic()
+                else:
+                    reply = self._verify()
 
-				# Если пользователь не верифицирован
-				if state == State.no_verify:
-					verification_code = self._generate_code(5)
-					tg_user.verification_code = verification_code
-					tg_user.save()
-					text = f'Привет! Кажется, мы еще не знакомы? Для подтверждения аккаунта ' \
-					       f'введите этот код на сайте: *{verification_code}*'
-					tg_client.send_message(chat_id=chat_id, text=text)
-					continue
+                self._send_reply(reply=reply)
+                self.reply_required = False
 
-				# Бот ожидает команду
-				if state == State.wait_command:
-					if item.message.text == BotCommands.goals:
-						text = self._get_goals(tg_user.user)
-						tg_client.send_message(chat_id=chat_id, text=text)
-					elif item.message.text == BotCommands.create:
-						categories = self._get_categories(tg_user.user)
-						text = categories['text']
-						tg_client.send_message(chat_id=chat_id, text=text)
-						state = State.choice_category
-						continue
-					else:
-						text = 'Неизвестная команда, попробуйте еще!'
-						tg_client.send_message(chat_id=chat_id, text=text)
 
-				# Выбор категории
-				if state == State.choice_category:
-					if item.message.text in [i.title for i in categories['categories']]:
-						goal_category = GoalCategory.objects.get(title=item.message.text, user=tg_user.user)
-						text = 'Введите название цели:'
-						tg_client.send_message(chat_id=item.message.chat.id, text=text)
-						state = State.create_goal
-						continue
-					elif item.message.text == BotCommands.cancel:
-						text = 'Создание цели отменено'
-						state = State.wait_command
-					else:
-						text = 'Неправильная категория. Попробуйте еще!'
-					tg_client.send_message(chat_id=item.message.chat.id, text=text)
+    def _get_response(self) -> None:
+        """Get key data from response"""
+        # get key data from response
+        self.response = self.tg_client.get_updates(offset=self.offset)
 
-				# Создание цели
-				if state == State.create_goal:
-					goal_title = item.message.text
-					Goal.objects.create(
-						title=goal_title,
-						category=goal_category,
-						user=tg_user.user,
-						due_date=datetime.date.today() + datetime.timedelta(days=7)
-					)
-					text = 'Цель создана!'
-					tg_client.send_message(chat_id=item.message.chat.id, text=text)
-					state = State.wait_command
+        for item in self.response.result:
+            self.offset = item.update_id + 1
+            self.chat_id = item.message.chat.id
+            self.tg_user_id = item.message.from_.id
+            self.message = item.message.text
 
-				print(f'{item.message.message_from.first_name}: {item.message.text}')
+            self.user = TgUser.objects.filter(
+                tg_user_id=self.tg_user_id, user_id__isnull=False
+            ).first()
 
-	@staticmethod
-	def _generate_code(length: int) -> str:
-		"""Генерирует код верификации"""
-		letters = string.digits
-		return ''.join(random.choice(letters) for i in range(length))
+            # check if message is new
+            if not self.message_id == item.message.message_id:
+                self.reply_required = True
 
-	@staticmethod
-	def _get_goals(user: User) -> str:
-		"""Формирует список целей"""
-		goals = Goal.objects.filter(user=user, is_deleted=False)
-		return '\n'.join([f'#{i.id} - {i.title}' for i in goals])
+            self.message_id = item.message.message_id
 
-	@staticmethod
-	def _get_categories(user: User) -> dict:
-		"""Формирует список категорий"""
-		categories = GoalCategory.objects.filter(user=user, is_deleted=False)
-		cat_list = '\n'.join([f'  - _{i.title}_' for i in categories])
-		text = 'Выберите категорию из списка:\n' + cat_list
-		return {'categories': categories, 'text': text}
+    def _main_logic(self) -> str:
+        """Logic for verified user"""
+        # logic for goal creation - choose category, create goal
+        if self.message == '/cancel':
+            self.category_mode = False
+            self.goal_mode = False
+            reply = f'Операция прервана, введите команду'
+        elif self.category_mode:
+            reply = self._choose_category()
+        elif self.goal_mode:
+            reply = self._create_goal()
+
+        # key commands
+        elif self.message == '/goals':
+            reply = self._goals()
+        elif self.message == '/create':
+            reply = self._create()
+
+        else:
+            reply = 'Неизвестная команда'
+
+        return reply
+
+    def _verify(self) -> str:
+        """Starting logic"""
+        verification_code = randint(10000, 99999)
+
+        self.tg_user = TgUser.objects.filter(tg_user_id=self.tg_user_id).first()
+        if not self.tg_user:
+            TgUser.objects.create(
+                tg_user_id=self.tg_user_id,
+                tg_chat_id=self.chat_id,
+                verification_code=verification_code
+            )
+        else:
+            self.tg_user.verification_code = verification_code
+            self.tg_user.save()
+
+        reply = (f"Подтвердите, пожалуйста, свой аккаунт. "
+                 f"Для подтверждения необходимо ввести код: {verification_code} "
+                 f"на сайте")
+        return reply
+
+    def _goals(self) -> list:
+        """Logic for /goals command - choose category"""
+        goals = Goal.objects.filter(
+            category__board__participants__user=self.user.user, is_deleted=False
+        ).only('id', 'title')
+        prefix = ['Cписок ваших целей:']
+        reply = [f'#{goal.id} {goal.title}' for goal in goals]
+        return prefix + reply
+
+    def _create(self) -> list:
+        """Logic for /create command - list of categories"""
+        categories = Category.objects.filter(
+            board__participants__user=self.user.user,
+            board__participants__role__in=[BoardParticipant.Role.owner, BoardParticipant.Role.writer],
+            is_deleted=False
+        ).only('id', 'title')
+        self.category_mode = True
+        prefix = ['Введите номер категории зи списка доступных:']
+        reply = [f'#{category.id} {category.title}' for category in categories]
+        return prefix + reply
+
+    def _choose_category(self) -> str:
+        """Logic for /create command - choose category"""
+
+        if not self.message.isnumeric():
+            return f'Выбрана неверная категория'
+
+        self.category = Category.objects.filter(
+            pk=self.message,
+            board__participants__user=self.user.user,
+            board__participants__role__in=[BoardParticipant.Role.owner, BoardParticipant.Role.writer],
+            is_deleted=False
+        ).first()
+
+        if not self.category:
+            reply = f'Выбрана неверная категория'
+        else:
+            reply = (f'Выбрана категория {self.category.title}. '
+                     f'Введите цель')
+            self.goal_mode = True
+            self.category_mode = False
+
+        return reply
+
+    def _create_goal(self) -> str:
+        """Logic for /create command - create goal"""
+        self.goal = Goal.objects.create(
+            user=self.user.user, title=self.message, category=self.category
+        )
+        self.goal_mode = False
+        return f'Цель "{self.goal.title}" создана'
+
+    def _send_reply(self, reply: str | list) -> None:
+        """Send reply"""
+        if isinstance(reply, list):
+            for item in reply:
+                self.tg_client.send_message(chat_id=self.chat_id, text=item)
+        else:
+            self.tg_client.send_message(chat_id=self.chat_id, text=reply)
